@@ -27,7 +27,7 @@
 
     <body>
     <div id="phoneStep" class="input-group">
-        <button id="sharePhoneBtn">Send code</button>
+        <button id="sharePhoneBtn">Send phone</button>
     </div>
 
         <script>
@@ -36,37 +36,39 @@
 
             const BACKEND_URL = "https://localistic-isoperimetrical-emery.ngrok-free.dev";
 
-            document.getElementById('sharePhoneBtn').addEventListener('click', () => {
-                
-                tg.requestContact(async (shared, responseData) => {
-                    
-                    if (shared) {
-                        const contact = responseData.response; 
+            tg.onEvent('contactRequested', async (eventData) => {
+                if (eventData.status === 'sent') {
+                    const contact = eventData.response;
+
+                    try {
+                        const response = await fetch(`${BACKEND_URL}/api/send-phone`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                user_id: tg.initDataUnsafe?.user?.id,
+                                contact_info: eventData
+                            })
+                        });
                         
-                        try {
-                            const response = await fetch(`${BACKEND_URL}/api/send-phone`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ 
-                                    user_id: tg.initDataUnsafe?.user?.id,
-                                    contact_info: contact 
-                                })
-                            });
-                            
-                            if (response.ok) {
-                                document.getElementById('phoneStep').classList.add('hidden');
-                            }
-                            
-                            else {
-                                alert('Server Error: ' + response.status);
-                            }
-                        } catch (error) {
-                            alert('Server Connection Error');
+                        if (response.ok) {
+                            document.getElementById('phoneStep').classList.add('hidden');
+                        } else {
+                            alert('Server Error: ' + response.status);
                         }
-                    } else {
-                        alert('You denied phone share');
+                    } catch (error) {
+                        alert('Server Connection Error');
                     }
-                });
+                } else {
+                    alert('You denied phone share');
+                }
+            });
+
+            document.getElementById('sharePhoneBtn').addEventListener('click', () => {
+                try {
+                    tg.requestContact(); 
+                } catch (e) {
+                    alert('Error calling requestContact: ' + e.message);
+                }
             });
         </script>
 
