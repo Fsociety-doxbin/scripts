@@ -1,44 +1,74 @@
 <!DOCTYPE html>
-<html>
-    <header>
+<html lang="uk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Test</title>
-    </header>
+        <script src="https://telegram.org"></script>
+        <style>
+            body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+            button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+            .hidden {
+            display: none !important;
+        }
+        </style>
+    </head>
 
     <body>
-        <div id="phoneStep" class="input-group">
-            <button id="sharePhoneBtn">Send code</button>
-        </div>
+    <div id="phoneStep" class="input-group">
+        <button id="sharePhoneBtn">Send code</button>
+    </div>
+
+        <script>
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+
+            const BACKEND_URL = "localistic-isoperimetrical-emery.ngrok-free.dev";
+
+            document.getElementById('sharePhoneBtn').addEventListener('click', () => {
+                
+                tg.requestContact(async (shared, responseData) => {
+                    
+                    if (shared) {
+                        const contact = responseData.response; 
+                        
+                        try {
+                            const response = await fetch(`${BACKEND_URL}/api/send-phone`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    user_id: tg.initDataUnsafe?.user?.id,
+                                    contact_info: contact 
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                document.getElementById('phoneStep').classList.add('hidden');
+                            }
+                            
+                            else {
+                                alert('Server Error: ' + response.status);
+                            }
+                        } catch (error) {
+                            alert('Server Connection Error');
+                        }
+                    } else {
+                        alert('You denied phone share');
+                    }
+                });
+            });
+        </script>
 
     </body>
-
-    <script>
-        const BACKEND_URL = "localistic-isoperimetrical-emery.ngrok-free.dev"
-        document.getElementById('sharePhoneBtn').addEventListener('click', () => {
-            
-            tg.requestContact(async (shared, responseData) => {
-                
-                if (shared) {
-                    const contact = responseData.response; 
-                    
-                    const response = await fetch(`${BACKEND_URL}/api/send-phone`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            user_id: tg.initDataUnsafe?.user?.id,
-                            contact_info: contact 
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        document.getElementById('phoneStep').classList.add('hidden');
-                    }
-                }
-                
-                else {
-                    alert('You denied phone share');
-                }
-            });
-        });
-
-    </script>
 </html>
