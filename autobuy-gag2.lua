@@ -99,11 +99,19 @@ local GearPrices = {
     ["Super Sprinkler"] = 3000000
 }
 
-local seedsList = {}
-local gearsList = {}
+local seedsList = {
+    "Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", 
+    "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana", "Grape", 
+    "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", 
+    "Venus Fly Trap", "Pomegranate", "Poison Apple", "Moon Bloom", "Dragon's Breath"
+}
 
-for name in pairs(SeedPrices) do table.insert(seedsList, name) end
-for name in pairs(GearPrices) do table.insert(gearsList, name) end
+local gearsList = {
+    "Common Watering Can", "Common Sprinkler", "Sign", "Uncommon Sprinkler", "Trowel", 
+    "Rare Sprinkler", "Jump Mushroom", "Speed Mushroom", "Lantern", "Shrink Mushroom", 
+    "Supersize Mushroom", "Gnome", "Flashbang", "Basic Pot", "Legendary Sprinkler", 
+    "Invisibility Mushroom", "Teleporter", "Wheelbarrow", "Super Watering Can", "Super Sprinkler"
+}
 
 local TargetSeeds = {}
 local TargetGears = {}
@@ -257,16 +265,18 @@ local function createDropdown(titleText, items, targetTable, priceTable)
 
     local ItemsLayout = Instance.new("UIListLayout")
     ItemsLayout.Padding = UDim.new(0, 4)
+    ItemsLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ItemsLayout.Parent = ItemsListFrame
 
-    for _, itemName in ipairs(items) do
+    for index, itemName in ipairs(items) do
         local price = priceTable[itemName] or 0
         local priceText = formatNumber(price)
         
         local ItemBtn = Instance.new("TextButton")
+        ItemBtn.LayoutOrder = index
         ItemBtn.Size = UDim2.new(1, 0, 0, 30)
         ItemBtn.BackgroundColor3 = Color3.fromRGB(33, 33, 33)
-        ItemBtn.Text = string.format("❌ %s (%s ¢)", itemName, priceText)
+        ItemBtn.Text = string.format("%s (%s ¢)", itemName, priceText)
         ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
         ItemBtn.Font = Enum.Font.SourceSansSemibold
         ItemBtn.TextSize = 13
@@ -280,11 +290,9 @@ local function createDropdown(titleText, items, targetTable, priceTable)
             targetTable[itemName] = not targetTable[itemName]
             if targetTable[itemName] then
                 ItemBtn.BackgroundColor3 = Color3.fromRGB(46, 125, 50)
-                ItemBtn.Text = string.format("⚡ СНАЙП: %s (%s ¢)", itemName, priceText)
                 ItemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             else
                 ItemBtn.BackgroundColor3 = Color3.fromRGB(33, 33, 33)
-                ItemBtn.Text = string.format("❌ %s (%s ¢)", itemName, priceText)
                 ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
             end
         end)
@@ -348,8 +356,8 @@ task.spawn(function()
         if AutoBuyActive then
             local currentBalance = getCurrentBalance()
             
-            for seedName, isSelected in pairs(TargetSeeds) do
-                if isSelected then
+            for _, seedName in ipairs(seedsList) do
+                if TargetSeeds[seedName] then
                     local price = SeedPrices[seedName] or 0
                     if currentBalance >= price then
                         buySeed(seedName)
@@ -359,8 +367,8 @@ task.spawn(function()
                 end
             end
             
-            for gearName, isSelected in pairs(TargetGears) do
-                if isSelected then
+            for _, gearName in ipairs(gearsList) do
+                if TargetGears[gearName] then
                     local price = GearPrices[gearName] or 0
                     if currentBalance >= price then
                         buyGear(gearName)
