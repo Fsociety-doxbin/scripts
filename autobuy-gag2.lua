@@ -8,6 +8,20 @@ if oldGui then
     oldGui:Destroy() 
 end
 
+local function getCurrentBalance()
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if leaderstats then
+        local moneyObj = leaderstats:FindFirstChild("Coins") 
+            or leaderstats:FindFirstChild("Money") 
+            or leaderstats:FindFirstChild("Cash")
+            or leaderstats:FindFirstChild("CoinsValue")
+        if moneyObj then
+            return moneyObj.Value
+        end
+    end
+    return 999999999
+end
+
 local networking = require(game.ReplicatedStorage.SharedModules.Networking)
 
 local purchaseSeed = networking.SeedShop.PurchaseSeed
@@ -34,62 +48,67 @@ end
 
 local AutoBuyActive = false
 
-local TargetSeeds = {}
-local seedsList = {
-    "Carrot",
-    "Strawberry",
-    "Blueberry",
-    "Tulip",
-    "Tomato",
-    "Apple",
-    "Bamboo",
-    "Corn",
-    "Cactus",
-    "Pineapple",
-    "Mushroom",
-    "Green Bean",
-    "Banana",
-    "Grape",
-    "Coconut",
-    "Mango",
-    "Dragon Fruit",
-    "Acorn",
-    "Cherry",
-    "Sunflower",
-    "Venus Fly Trap",
-    "Pomegranate",
-    "Poison Apple",
-    "Moon Bloom",
-    "Dragon's Breath"
+local SeedPrices = {
+    ["Carrot"] = 1,
+    ["Strawberry"] = 10,
+    ["Blueberry"] = 25,
+    ["Tulip"] = 40,
+    ["Tomato"] = 200,
+    ["Apple"] = 400,
+    ["Bamboo"] = 700,
+    ["Corn"] = 2500,
+    ["Cactus"] = 5000,
+    ["Pineapple"] = 10000,
+    ["Mushroom"] = 15000,
+    ["Green Bean"] = 20000,
+    ["Banana"] = 30000,
+    ["Grape"] = 50000,
+    ["Coconut"] = 140000,
+    ["Mango"] = 300000,
+    ["Dragon Fruit"] = 120000,
+    ["Acorn"] = 700000,
+    ["Cherry"] = 1200000,
+    ["Sunflower"] = 5000000,
+    ["Venus Fly Trap"] = 7000000,
+    ["Pomegranate"] = 12000000,
+    ["Poison Apple"] = 25000000,
+    ["Moon Bloom"] = 65000000,
+    ["Dragon's Breath"] = 90000000
 }
 
-for _, v in ipairs(seedsList) do TargetSeeds[v] = false end
+local GearPrices = {
+    ["Common Watering Can"] = 2000,
+    ["Common Sprinkler"] = 3000,
+    ["Sign"] = 4000,
+    ["Uncommon Sprinkler"] = 10000,
+    ["Trowel"] = 1000,
+    ["Rare Sprinkler"] = 80000,
+    ["Jump Mushroom"] = 1800,
+    ["Speed Mushroom"] = 1500,
+    ["Lantern"] = 12000,
+    ["Shrink Mushroom"] = 10000,
+    ["Supersize Mushroom"] = 4500,
+    ["Gnome"] = 100000,
+    ["Flashbang"] = 20000,
+    ["Basic Pot"] = 300000,
+    ["Legendary Sprinkler"] = 1200000,
+    ["Invisibility Mushroom"] = 30000,
+    ["Teleporter"] = 60000,
+    ["Wheelbarrow"] = 500000,
+    ["Super Watering Can"] = 1000000,
+    ["Super Sprinkler"] = 3000000
+}
 
+local seedsList = {}
+local gearsList = {}
+
+for name in pairs(SeedPrices) do table.insert(seedsList, name) end
+for name in pairs(GearPrices) do table.insert(gearsList, name) end
+
+local TargetSeeds = {}
 local TargetGears = {}
-local gearsList = {
-	"Common Watering Can",
-	"Common Sprinkler",
-	"Sign",
-	"Uncommon Sprinkler",
-	"Trowel",
-	"Rare Sprinkler",
-	"Jump Mushroom",
-	"Speed Mushroom",
-	"Lantern",
-	"Shrink Mushroom",
-	"Supersize Mushroom",
-	"Gnome",
-	"Flashbang",
-	"Basic Pot",
-	"Legendary Sprinkler",
-	"Invisibility Mushroom",
-	"Teleporter",
-	"Wheelbarrow",
-	"Super Watering Can",
-	"Super Sprinkler"
-	}
-
-for _, v in ipairs(gearsList) do TargetGears[v] = false end
+for _, name in ipairs(seedsList) do TargetSeeds[name] = false end
+for _, name in ipairs(gearsList) do TargetGears[name] = false end
 
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -162,7 +181,7 @@ local MainToggleBtn = Instance.new("TextButton")
 MainToggleBtn.Size = UDim2.new(1, -14, 0, 40)
 MainToggleBtn.Position = UDim2.new(0, 7, 0, 42)
 MainToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-MainToggleBtn.Text = "Auto-Buy"
+MainToggleBtn.Text = "🔴 Auto-Buy: OFF"
 MainToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MainToggleBtn.Font = Enum.Font.SourceSansBold
 MainToggleBtn.TextSize = 13
@@ -176,9 +195,10 @@ MainToggleBtn.MouseButton1Click:Connect(function()
     AutoBuyActive = not AutoBuyActive
     if AutoBuyActive then
         MainToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 125, 50)
-
+        MainToggleBtn.Text = "🟢 Auto-Buy: ON"
     else
         MainToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        MainToggleBtn.Text = "🔴 Auto-Buy: OFF"
     end
 end)
 
@@ -196,7 +216,16 @@ local ContainerLayout = Instance.new("UIListLayout")
 ContainerLayout.Padding = UDim.new(0, 8)
 ContainerLayout.Parent = ContainerScroll
 
-local function createDropdown(titleText, items, targetTable, isGears)
+local function formatNumber(num)
+    if num >= 1000000 then
+        return string.format("%.1fM", num / 1000000):gsub("%.0", "")
+    elseif num >= 1000 then
+        return string.format("%.1fk", num / 1000):gsub("%.0", "")
+    end
+    return tostring(num)
+end
+
+local function createDropdown(titleText, items, targetTable, priceTable)
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Size = UDim2.new(1, -6, 0, 32)
     DropdownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -230,11 +259,14 @@ local function createDropdown(titleText, items, targetTable, isGears)
     ItemsLayout.Padding = UDim.new(0, 4)
     ItemsLayout.Parent = ItemsListFrame
 
-    local function createItemButton(itemName)
+    for _, itemName in ipairs(items) do
+        local price = priceTable[itemName] or 0
+        local priceText = formatNumber(price)
+        
         local ItemBtn = Instance.new("TextButton")
         ItemBtn.Size = UDim2.new(1, 0, 0, 30)
         ItemBtn.BackgroundColor3 = Color3.fromRGB(33, 33, 33)
-        ItemBtn.Text = itemName
+        ItemBtn.Text = string.format("❌ %s (%s ¢)", itemName, priceText)
         ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
         ItemBtn.Font = Enum.Font.SourceSansSemibold
         ItemBtn.TextSize = 13
@@ -248,16 +280,14 @@ local function createDropdown(titleText, items, targetTable, isGears)
             targetTable[itemName] = not targetTable[itemName]
             if targetTable[itemName] then
                 ItemBtn.BackgroundColor3 = Color3.fromRGB(46, 125, 50)
+                ItemBtn.Text = string.format("⚡ СНАЙП: %s (%s ¢)", itemName, priceText)
                 ItemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             else
                 ItemBtn.BackgroundColor3 = Color3.fromRGB(33, 33, 33)
+                ItemBtn.Text = string.format("❌ %s (%s ¢)", itemName, priceText)
                 ItemBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
             end
         end)
-    end
-
-    for _, itemName in ipairs(items) do
-        createItemButton(itemName)
     end
 
     local isOpen = false
@@ -275,8 +305,8 @@ local function createDropdown(titleText, items, targetTable, isGears)
     HeaderBtn.MouseButton1Click:Connect(toggleDropdown)
 end
 
-createDropdown("🌱 Seeds", seedsList, TargetSeeds, false)
-createDropdown("🔧 Gears", gearsList, TargetGears, true)
+createDropdown("🌱 Seeds", seedsList, TargetSeeds, SeedPrices)
+createDropdown("🔧 Gears", gearsList, TargetGears, GearPrices)
 
 local minimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
@@ -316,17 +346,27 @@ UserInputService.InputChanged:Connect(function(input) if input == dragInput and 
 task.spawn(function()
     while not StopFlag.Value do
         if AutoBuyActive then
+            local currentBalance = getCurrentBalance()
+            
             for seedName, isSelected in pairs(TargetSeeds) do
                 if isSelected then
-                    buySeed(seedName)
-                    buySeed(seedName .. " Seed")
+                    local price = SeedPrices[seedName] or 0
+                    if currentBalance >= price then
+                        buySeed(seedName)
+                        buySeed(seedName .. " Seed")
+                        currentBalance = currentBalance - price
+                    end
                 end
             end
             
             for gearName, isSelected in pairs(TargetGears) do
                 if isSelected then
-                    buyGear(gearName)
-                    buyCrate(gearName)
+                    local price = GearPrices[gearName] or 0
+                    if currentBalance >= price then
+                        buyGear(gearName)
+                        buyCrate(gearName)
+                        currentBalance = currentBalance - price
+                    end
                 end
             end
             
@@ -337,7 +377,9 @@ task.spawn(function()
     end
 end)
 
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    game:GetService("VirtualUser"):CaptureController()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new(0, 0))
+player.Idled:Connect(function()
+    pcall(function()
+        game:GetService("VirtualUser"):CaptureController()
+        game:GetService("VirtualUser"):ClickButton2(Vector2.new(0, 0))
+    end)
 end)
